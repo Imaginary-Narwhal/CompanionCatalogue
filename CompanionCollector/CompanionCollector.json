@@ -1,0 +1,15 @@
+{
+  "Author": "DragonFlyy",
+  "Name": "Companion Collector",
+  "Punchline": "A Minion and Mount Guide replacement",
+  "Description": "A Minion and Mount Guide replacement with context on where to find missing minions and mounts.",
+  "InternalName": "CompanionCollector",
+  "AssemblyVersion": "0.0.0.1",
+  "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/Imaginary-Narwhal/CompanionCollector",
+  "Tags": [
+    "minion",
+    "mount",
+    "collector"
+  ]
+}
