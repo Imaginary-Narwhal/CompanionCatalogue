@@ -7,47 +7,54 @@ using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
-
-#nullable disable
 
 namespace CompanionCollector;
 public sealed class Plugin : IDalamudPlugin
 {
     public static string Name => "Companion Collector";
-
-    internal Configuration Config { get; init; }
-    public WindowSystem WindowSystem = new("CompanionCollector");
-
     private PluginCommandManager<Plugin> CommandManager { get; init; }
-
-    private CompanionCollectorWindow CompanionCollectorWindow { get; init; }
+    internal CompanionCollectorWindow CompanionCollectorWindow { get; init; }
 
     public Plugin(DalamudPluginInterface _pluginInterface)
     {
         Service.Initialize(_pluginInterface);
+        Service.DrawService = new();
+
+        Service.ClientState.Login += () => 
+        {
+            Service.Configuration.Login(Service.ClientState.LocalPlayer.Name,
+                Service.ClientState.LocalPlayer.HomeWorld.GameData.Name);
+        };
+
         CommandManager = new(this);
 
-        Config = Service.Interface.GetPluginConfig() as Configuration ?? new Configuration();
-        Config.Initialize(Service.Interface);
+        Service.Configuration = Service.Interface.GetPluginConfig() as Configuration ?? new Configuration();
 
-        CompanionCollectorWindow = new CompanionCollectorWindow(this);
-        WindowSystem.AddWindow(CompanionCollectorWindow);
+        CompanionCollectorWindow = new CompanionCollectorWindow();
+        Service.WindowSystem.AddWindow(CompanionCollectorWindow);
 
         Service.Interface.UiBuilder.Draw += DrawUI;
+
+        Service.MountProvider = new();
+
     }
 
     public void Dispose()
     {
         CommandManager.Dispose();
-        WindowSystem.RemoveAllWindows();
+        Service.WindowSystem.RemoveAllWindows();
         Service.Interface.UiBuilder.Draw -= DrawUI;
+        Service.DrawService.textureDictionary.Clear();
     }
 
     private void DrawUI()
     {
-        WindowSystem.Draw();
+        Service.WindowSystem.Draw();
     }
 
     [Command("/pcc")]
@@ -55,6 +62,7 @@ public sealed class Plugin : IDalamudPlugin
     public void ItemCounterCommand(string _, string __)
     {
         CompanionCollectorWindow.IsOpen = true;
-        Service.ChatGui.Print("Open teh window.");
+
+        File.WriteAllText(@"c:\temp\mounts.json", JsonConvert.SerializeObject(Service.MountProvider.AllMounts, Formatting.Indented));
     }
 }
