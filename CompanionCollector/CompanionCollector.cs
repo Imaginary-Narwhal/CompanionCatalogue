@@ -41,6 +41,7 @@ public sealed class Plugin : IDalamudPlugin
         Service.Interface.UiBuilder.Draw += DrawUI;
 
         Service.MountProvider = new();
+        Service.MinionProvider = new();
 
     }
 
@@ -59,10 +60,5 @@ public sealed class Plugin : IDalamudPlugin
 
     [Command("/pcc")]
     [HelpMessage("Open the Companion Collector window")]
-    public void ItemCounterCommand(string _, string __)
-    {
-        CompanionCollectorWindow.IsOpen = true;
-
-        File.WriteAllText(@"c:\temp\mounts.json", JsonConvert.SerializeObject(Service.MountProvider.AllMounts, Formatting.Indented));
-    }
+    public void ItemCounterCommand(string _, string __) => CompanionCollectorWindow.IsOpen = true;
 }

@@ -1,7 +1,10 @@
 using CompanionCollector.Models;
 using CompanionCollector.Services;
+using Dalamud.Interface.GameFonts;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using ImGuiScene;
 using System;
@@ -13,6 +16,10 @@ namespace CompanionCollector.Windows;
 public sealed class CompanionCollectorWindow : Window, IDisposable
 {
     private Mount SelectedMount { get; set; } = null;
+    private Minion SelectedMinion { get; set; }= null;
+
+    private readonly GameFontHandle TitleFont = Service.Interface.UiBuilder.GetGameFontHandle(new GameFontStyle(GameFontFamily.Axis, 25.0f));
+
 
     public CompanionCollectorWindow() : base(
             "Companion Collector", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
@@ -89,8 +96,10 @@ public sealed class CompanionCollectorWindow : Window, IDisposable
                                 ));
                             Service.DrawService.DrawIcon(mount.Icon, new Vector2(48, 48));
                             ImGui.SameLine();
-                            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 15);
-                            ImGui.Text($"{mount.Name}");
+                            using (ImRaii.PushFont(TitleFont.ImFont))
+                            {
+                                ImGui.TextWrapped($"{mount.Name}");
+                            }
                             if (!mount.Owned)
                             {
                                 using (ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0, 0, 0, opacity + .25f)))
@@ -100,7 +109,6 @@ public sealed class CompanionCollectorWindow : Window, IDisposable
                                     { }
                                     if (ImGui.IsItemClicked())
                                     {
-                                        Service.Message("yep");
                                         SelectedMount = mount;
                                     }
                                 }
@@ -110,6 +118,11 @@ public sealed class CompanionCollectorWindow : Window, IDisposable
                         {
                             SelectedMount = mount;
                         }
+                        if(ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && ImGui.IsItemHovered())
+                        {
+                            SelectedMount = mount;
+                            SummonMount(mount.Id);
+                        }
                     }
                 }
             }
@@ -118,6 +131,91 @@ public sealed class CompanionCollectorWindow : Window, IDisposable
 
     public void DrawMinions()
     {
-        ImGui.Text("Minion Tab");
+        var MinionList = Service.MinionProvider.GetSortedMinions();
+        using (ImRaii.Child("minions"))
+        {
+            ImGuiListClipperPtr Clipper;
+            unsafe { Clipper = new(ImGuiNative.ImGuiListClipper_ImGuiListClipper()); }
+            Clipper.Begin(MinionList.Count);
+            while (Clipper.Step())
+            {
+                for (int i = Clipper.DisplayStart; i < Clipper.DisplayEnd; i++)
+                {
+                    var minion = MinionList[i];
+                    var opacity = .5f;
+                    var color = 0f;
+                    if (SelectedMinion != null)
+                    {
+                        if (minion.Id == SelectedMinion.Id)
+                        {
+                            if (!SelectedMinion.Owned)
+                            {
+                                color = 1f;
+                            }
+                            else
+                            {
+                                color = .3f;
+                            }
+                        }
+                    }
+
+                    using (ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(color, 0, color, opacity)))
+                    {
+                        using (var group = ImRaii.Child($"##{minion.Name}", new Vector2(300, 60), false, ImGuiWindowFlags.ChildWindow))
+                        {
+                            ImGui.SetCursorPos(new Vector2(
+                                ImGui.GetCursorPosX() + 5,
+                                ImGui.GetCursorPosY() + 6
+                                ));
+                            Service.DrawService.DrawIcon(minion.Icon, new Vector2(48, 48));
+                            ImGui.SameLine();
+                            using (ImRaii.PushFont(TitleFont.ImFont))
+                            {
+                                ImGui.TextWrapped($"{minion.Name}");
+                            }
+
+                            if (!minion.Owned)
+                            {
+                                using (ImRaii.PushColor(ImGuiCol.ChildBg, new Vector4(0, 0, 0, opacity + .25f)))
+                                {
+                                    ImGui.SetCursorPos(new Vector2(0, 0));
+                                    using (var overlay = ImRaii.Child($"##over{minion.Name}", new Vector2(300, 60), false, ImGuiWindowFlags.ChildWindow))
+                                    { }
+                                    if (ImGui.IsItemClicked())
+                                    {
+                                        SelectedMinion = minion;
+                                    }
+                                }
+                            }
+                        }
+                        if (ImGui.IsItemClicked())
+                        {
+                            SelectedMinion = minion;
+                        }
+                        if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && ImGui.IsItemHovered())
+                        {
+                            SelectedMinion = minion; ;
+                            SummonMinion(minion.Id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static unsafe void SummonMount(uint Id)
+    {
+        if(Id > 0)
+        {
+            ActionManager.Instance()->UseAction(ActionType.Mount, Id);
+        }
+    }
+
+    private static unsafe void SummonMinion(uint Id)
+    {
+        if(Id > 0)
+        {
+            ActionManager.Instance()->UseAction(ActionType.Companion, Id);
+        }
     }
 }

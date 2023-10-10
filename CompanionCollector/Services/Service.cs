@@ -33,6 +33,7 @@ public class Service
     [PluginService][RequiredVersion("1.0")] public static ITextureProvider TextureProvider { get; private set; } = null;
 
     internal static MountProvider MountProvider { get; set; }
+    internal static MinionProvider MinionProvider { get; set; }
     internal static Configuration Configuration { get; set; }
     internal static WindowSystem WindowSystem = new("CompanionCollector");
     internal static DrawService DrawService { get; set; }
